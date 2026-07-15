@@ -29,7 +29,6 @@ class InstagramUploader:
     def __init__(self, access_token: str, ig_business_account_id: str) -> None:
         self.access_token = access_token
         self.ig_business_account_id = ig_business_account_id
-        self.session = requests.Session()
 
     def upload_reel(self, video_url: str, caption: str) -> str:
         state = _UploadState()
@@ -51,15 +50,24 @@ class InstagramUploader:
         print("VIDEO URL:", video_url[:100])
         print("=" * 60)
 
+        data = {
+            "media_type": "REELS",
+            "video_url": video_url,
+            "caption": caption,
+            "access_token": self.access_token,
+        }
+        print("===== META REQUEST DATA =====")
+        print({
+            "media_type": "REELS",
+            "video_url": video_url,
+            "caption": caption,
+        })
+        print("=============================")
+
         payload = self._request(
             "POST",
             f"{GRAPH_BASE}/{self.ig_business_account_id}/media",
-            data={
-                "media_type": "REELS",
-                "video_url": video_url,
-                "caption": caption,
-                "access_token": self.access_token,
-            },
+            data=data,
             timeout=60,
         )
         if "id" not in payload:
@@ -106,9 +114,25 @@ class InstagramUploader:
         **kwargs: Any,
     ) -> dict[str, Any]:
         last_error: Exception | None = None
+        data = kwargs.get("data")
+        params = kwargs.get("params")
+        headers = kwargs.get("headers")
+        timeout = kwargs.get("timeout")
         for attempt in range(1, max_attempts + 1):
             try:
-                response = self.session.request(method, url, **kwargs)
+                self._print_request_debug(method, url, data, params, headers)
+                response = requests.request(
+                    method,
+                    url,
+                    data=data,
+                    params=params,
+                    headers=headers,
+                    timeout=timeout,
+                )
+                print("===== META RESPONSE =====")
+                print(response.status_code)
+                print(response.text)
+                print("=========================")
                 if response.status_code in TRANSIENT_STATUS_CODES and attempt < max_attempts:
                     self._sleep_with_backoff(attempt)
                     continue
@@ -120,6 +144,30 @@ class InstagramUploader:
                     break
                 self._sleep_with_backoff(attempt)
         raise InstagramApiError(f"Instagram request failed after {max_attempts} attempts: {last_error}")
+
+    @staticmethod
+    def _print_request_debug(
+        method: str,
+        url: str,
+        data: Any,
+        params: Any,
+        headers: Any,
+    ) -> None:
+        redacted_headers = dict(headers or {})
+        if "Authorization" in redacted_headers:
+            redacted_headers["Authorization"] = "<redacted>"
+        if isinstance(data, dict) and "access_token" in data:
+            data = {**data, "access_token": "<redacted>"}
+        if isinstance(params, dict) and "access_token" in params:
+            params = {**params, "access_token": "<redacted>"}
+
+        print("===== FINAL HTTP REQUEST =====")
+        print("Full URL:", url)
+        print("HTTP method:", method)
+        print("POST body:", data)
+        print("Query parameters:", params)
+        print("Request headers:", redacted_headers)
+        print("==============================")
 
     def _raise_for_meta_error(self, response: requests.Response) -> None:
         if response.ok:
