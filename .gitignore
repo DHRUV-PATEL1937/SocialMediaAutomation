@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+.env
+.env.*
+Google_refresh_token
+*.token
+*.secret
