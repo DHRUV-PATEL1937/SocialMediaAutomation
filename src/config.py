@@ -30,7 +30,7 @@ class Config:
 
     @classmethod
     def from_env(cls) -> "Config":
-        return cls(
+        config = cls(
             google_client_id=_env("GOOGLE_CLIENT_ID"),
             google_client_secret=_env("GOOGLE_CLIENT_SECRET"),
             google_refresh_token=_env("GOOGLE_REFRESH_TOKEN"),
@@ -46,3 +46,8 @@ class Config:
             low_queue_threshold=int(_env("LOW_QUEUE_THRESHOLD", required=False, default="2")),
             timezone=_env("TIMEZONE", required=False, default="Asia/Kolkata"),
         )
+        print("Loaded IG_BUSINESS_ACCOUNT_ID:", repr(config.ig_business_account_id))
+        print("Loaded IG_BUSINESS_ACCOUNT_ID length:", len(config.ig_business_account_id))
+        print("Loaded IG_BUSINESS_ACCOUNT_ID startswith:", config.ig_business_account_id[:6])
+        print("Loaded IG_BUSINESS_ACCOUNT_ID endswith:", config.ig_business_account_id[-6:])
+        return config
