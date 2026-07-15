@@ -44,6 +44,8 @@ class InstagramUploader:
         print("=" * 60)
         print("GRAPH_BASE:", GRAPH_BASE)
         print("IG BUSINESS ID:", self.ig_business_account_id)
+        print("IG Business ID repr:", repr(self.ig_business_account_id))
+        print("IG Business ID length:", len(self.ig_business_account_id))
         print("REQUEST URL:", f"{GRAPH_BASE}/{self.ig_business_account_id}/media")
         print("ACCESS TOKEN PREFIX:", self.access_token[:20] + "...")
         print("VIDEO URL:", video_url[:100])
