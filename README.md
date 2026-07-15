@@ -205,7 +205,7 @@ This is not a dry run. It will upload if a post is due.
 
 Before upload, the video is downloaded and checked:
 
-- Duration must be 60 seconds or less.
+- Duration must be 180 seconds or less.
 - Height must be greater than width.
 
 If validation fails, the script sends a Telegram error and does not mark the row as posted.

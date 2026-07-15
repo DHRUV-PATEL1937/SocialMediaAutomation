@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 PARTIAL_STATUSES = {"posted_yt_only", "posted_ig_only"}
 POSTABLE_STATUSES = {"pending"} | PARTIAL_STATUSES
+MAX_VIDEO_DURATION = 180  # seconds (3 minutes)
 
 
 def main() -> None:
@@ -156,8 +157,11 @@ def validate_short_video(video_path: Path) -> None:
     with VideoFileClip(str(video_path)) as clip:
         duration = float(clip.duration or 0)
         width, height = clip.size
-    if duration > 60.5:
-        raise ValueError(f"{video_path.name} is {duration:.1f}s long. Shorts/Reels should be 60s or less.")
+    if duration > MAX_VIDEO_DURATION:
+        raise ValueError(
+            f"{video_path.name} is {duration:.1f}s long. "
+            f"Videos should be {MAX_VIDEO_DURATION}s or less."
+        )
     if height <= width:
         raise ValueError(f"{video_path.name} is not vertical. Detected {width}x{height}.")
 
