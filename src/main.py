@@ -88,6 +88,7 @@ def run_once(config: Config) -> RunResult:
     with tempfile.TemporaryDirectory() as temp_dir:
         video_path = Path(temp_dir) / safe_filename(row.filename)
         drive.download_file(file_info["id"], video_path)
+        video_url = DriveClient.public_download_url(file_info["id"])
         validate_short_video(video_path)
 
         if "youtube" not in platform_ids:
@@ -96,7 +97,6 @@ def run_once(config: Config) -> RunResult:
             sheets.update_cells(row.row_number, {"status": "posted_yt_only", "platform_ids": format_platform_ids(platform_ids)})
 
         if "instagram" not in platform_ids:
-            video_url = DriveClient.public_download_url(file_info["id"])
             platform_ids["instagram"] = instagram.upload_reel(video_url, row.caption)
             sheets.update_cells(row.row_number, {"status": "posted_ig_only", "platform_ids": format_platform_ids(platform_ids)})
 
