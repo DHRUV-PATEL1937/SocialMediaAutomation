@@ -63,6 +63,8 @@ python generate_tokens.py
 
 The script opens a browser. Log in with the Google account that owns the Drive folder, Sheet, and YouTube channel. Copy the printed refresh token into your GitHub secret named `GOOGLE_REFRESH_TOKEN`.
 
+The Google token must include Drive read access plus `drive.file`, because large Instagram videos are compressed, uploaded as temporary Drive files, made public, and deleted after publishing.
+
 ## Google Drive Setup
 
 1. Create one Drive folder for your monthly video batch.
@@ -78,6 +80,20 @@ https://drive.google.com/uc?export=download&id=FILE_ID
 ```
 
 Drive can occasionally throttle very large files, so keep videos short and compressed.
+
+## Instagram Compression
+
+YouTube always receives the original downloaded video. Instagram uses the original Drive URL only when the original file is 60 MB or smaller.
+
+If the original file is larger than 60 MB, the workflow:
+
+1. Compresses a temporary MP4 locally with FFmpeg using H.264, AAC 128k audio, CRF 23, `medium` preset, and `+faststart`.
+2. Uploads that compressed copy to the same Google Drive folder.
+3. Makes the temporary Drive file public.
+4. Sends the temporary Drive URL to Instagram.
+5. Deletes the temporary Drive file and local compressed file in cleanup.
+
+FFmpeg must be installed and available on `PATH` wherever the workflow runs.
 
 ## Instagram / Meta Setup
 

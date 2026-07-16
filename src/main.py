@@ -16,6 +16,12 @@ from src.google_auth import build_google_credentials
 from src.instagram_uploader import InstagramUploader
 from src.notifier import Notifier
 from src.sheets_client import SheetRow, SheetsClient
+from src.temporary_drive_manager import (
+    configure_temporary_drive_manager,
+    delete_temp_drive_file,
+    upload_temp_video,
+)
+from src.video_compressor import compress_for_instagram
 from src.youtube_uploader import YouTubeUploader
 
 
@@ -26,6 +32,7 @@ logger = logging.getLogger(__name__)
 PARTIAL_STATUSES = {"posted_yt_only", "posted_ig_only"}
 POSTABLE_STATUSES = {"pending"} | PARTIAL_STATUSES
 MAX_VIDEO_DURATION = 180  # seconds (3 minutes)
+INSTAGRAM_COMPRESSION_THRESHOLD_BYTES = 60 * 1024 * 1024
 
 
 def main() -> None:
@@ -60,6 +67,7 @@ def run_once(config: Config) -> RunResult:
 
     sheets = SheetsClient(credentials, config.google_sheet_id)
     drive = DriveClient(credentials, config.google_drive_folder_id)
+    configure_temporary_drive_manager(drive)
     youtube = YouTubeUploader(credentials, config.youtube_privacy_status, config.youtube_category_id)
     instagram = InstagramUploader(config.ig_access_token, config.ig_business_account_id)
 
@@ -88,7 +96,8 @@ def run_once(config: Config) -> RunResult:
     with tempfile.TemporaryDirectory() as temp_dir:
         video_path = Path(temp_dir) / safe_filename(row.filename)
         drive.download_file(file_info["id"], video_path)
-        video_url = DriveClient.public_download_url(file_info["id"])
+        original_size = video_path.stat().st_size
+        logger.info("Original video size: %.2f MB", bytes_to_mb(original_size))
         validate_short_video(video_path)
 
         if "youtube" not in platform_ids:
@@ -97,7 +106,43 @@ def run_once(config: Config) -> RunResult:
             sheets.update_cells(row.row_number, {"status": "posted_yt_only", "platform_ids": format_platform_ids(platform_ids)})
 
         if "instagram" not in platform_ids:
-            platform_ids["instagram"] = instagram.upload_reel(video_url, row.caption)
+            video_url = DriveClient.public_download_url(file_info["id"])
+            compressed_path: Path | None = None
+            temp_drive_file_id: str | None = None
+            try:
+                if original_size > INSTAGRAM_COMPRESSION_THRESHOLD_BYTES:
+                    compressed_path = compress_for_instagram(video_path)
+                    compressed_size = compressed_path.stat().st_size
+                    logger.info("Compressed video size: %.2f MB", bytes_to_mb(compressed_size))
+                    logger.info("Compression ratio: %.2f", compressed_size / original_size)
+                    if compressed_size > INSTAGRAM_COMPRESSION_THRESHOLD_BYTES:
+                        logger.warning(
+                            "Compressed video is still above %.0f MB: %.2f MB",
+                            bytes_to_mb(INSTAGRAM_COMPRESSION_THRESHOLD_BYTES),
+                            bytes_to_mb(compressed_size),
+                        )
+                    temp_drive_file_id = upload_temp_video(compressed_path)
+                    video_url = DriveClient.public_download_url(temp_drive_file_id)
+                else:
+                    logger.info(
+                        "Original video is %.2f MB; skipping Instagram compression.",
+                        bytes_to_mb(original_size),
+                    )
+
+                platform_ids["instagram"] = instagram.upload_reel(video_url, row.caption)
+            finally:
+                if temp_drive_file_id:
+                    try:
+                        delete_temp_drive_file(temp_drive_file_id)
+                        logger.info("Temporary Drive deletion succeeded: %s", temp_drive_file_id)
+                    except Exception as exc:
+                        logger.warning("Temporary Drive deletion failed for %s: %s", temp_drive_file_id, exc)
+                if compressed_path and compressed_path.exists():
+                    try:
+                        compressed_path.unlink()
+                        logger.info("Deleted local temporary compressed file: %s", compressed_path)
+                    except OSError as exc:
+                        logger.warning("Local compressed file deletion failed for %s: %s", compressed_path, exc)
             sheets.update_cells(row.row_number, {"status": "posted_ig_only", "platform_ids": format_platform_ids(platform_ids)})
 
     final_status = status_from_platform_ids(platform_ids)
@@ -174,6 +219,10 @@ def title_from_filename(filename: str) -> str:
 
 def safe_filename(filename: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]", "_", filename)
+
+
+def bytes_to_mb(size: int) -> float:
+    return size / (1024 * 1024)
 
 
 if __name__ == "__main__":

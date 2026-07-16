@@ -40,31 +40,12 @@ class InstagramUploader:
         if state.creation_id:
             return state.creation_id
 
-        print("=" * 60)
-        print("GRAPH_BASE:", GRAPH_BASE)
-        print("IG BUSINESS ID:", self.ig_business_account_id)
-        print("IG Business ID repr:", repr(self.ig_business_account_id))
-        print("IG Business ID length:", len(self.ig_business_account_id))
-        print("IG_BUSINESS_ACCOUNT_ID startswith:", self.ig_business_account_id[:6])
-        print("IG_BUSINESS_ACCOUNT_ID endswith:", self.ig_business_account_id[-6:])
-        print("REQUEST URL:", f"{GRAPH_BASE}/{self.ig_business_account_id}/media")
-        print("ACCESS TOKEN PREFIX:", self.access_token[:20] + "...")
-        print("VIDEO URL:", video_url[:100])
-        print("=" * 60)
-
         data = {
             "media_type": "REELS",
             "video_url": video_url,
             "caption": caption,
             "access_token": self.access_token,
         }
-        print("===== META REQUEST DATA =====")
-        print({
-            "media_type": "REELS",
-            "video_url": video_url,
-            "caption": caption,
-        })
-        print("=============================")
 
         payload = self._request(
             "POST",
@@ -122,7 +103,6 @@ class InstagramUploader:
         timeout = kwargs.get("timeout")
         for attempt in range(1, max_attempts + 1):
             try:
-                self._print_request_debug(method, url, data, params, headers)
                 response = requests.request(
                     method,
                     url,
@@ -131,10 +111,6 @@ class InstagramUploader:
                     headers=headers,
                     timeout=timeout,
                 )
-                print("===== META RESPONSE =====")
-                print(response.status_code)
-                print(response.text)
-                print("=========================")
                 if response.status_code in TRANSIENT_STATUS_CODES and attempt < max_attempts:
                     self._sleep_with_backoff(attempt)
                     continue
@@ -146,30 +122,6 @@ class InstagramUploader:
                     break
                 self._sleep_with_backoff(attempt)
         raise InstagramApiError(f"Instagram request failed after {max_attempts} attempts: {last_error}")
-
-    @staticmethod
-    def _print_request_debug(
-        method: str,
-        url: str,
-        data: Any,
-        params: Any,
-        headers: Any,
-    ) -> None:
-        redacted_headers = dict(headers or {})
-        if "Authorization" in redacted_headers:
-            redacted_headers["Authorization"] = "<redacted>"
-        if isinstance(data, dict) and "access_token" in data:
-            data = {**data, "access_token": "<redacted>"}
-        if isinstance(params, dict) and "access_token" in params:
-            params = {**params, "access_token": "<redacted>"}
-
-        print("===== FINAL HTTP REQUEST =====")
-        print("Full URL:", url)
-        print("HTTP method:", method)
-        print("POST body:", data)
-        print("Query parameters:", params)
-        print("Request headers:", redacted_headers)
-        print("==============================")
 
     def _raise_for_meta_error(self, response: requests.Response) -> None:
         if response.ok:
