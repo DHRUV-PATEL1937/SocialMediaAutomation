@@ -77,8 +77,15 @@ def run_once(config: Config) -> RunResult:
         logger.warning("Low queue: only %s postable videos remain.", pending_count)
 
     last_posted_at = latest_posted_at(rows)
-    if last_posted_at and now < last_posted_at + timedelta(days=config.post_interval_days):
-        due_at = last_posted_at + timedelta(days=config.post_interval_days)
+    due_at = last_posted_at + timedelta(days=config.post_interval_days) if last_posted_at else None
+    logger.info(
+        "Due check: now=%s, last_posted_at=%s, due_at=%s, force_post=%s",
+        now.isoformat(),
+        last_posted_at.isoformat() if last_posted_at else "none",
+        due_at.isoformat() if due_at else "now",
+        config.force_post,
+    )
+    if due_at and now < due_at and not config.force_post:
         return RunResult(f"Not due yet. Next post is due at {due_at.isoformat()}.", False)
 
     row = next((item for item in rows if item.status in POSTABLE_STATUSES), None)

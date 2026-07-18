@@ -2,8 +2,17 @@ name: Post Shorts And Reels
 
 on:
   schedule:
-    - cron: "0 14 * * *"
+    - cron: "0 */6 * * *"
   workflow_dispatch:
+    inputs:
+      force_post:
+        description: "Post now even if the 2-day interval is not due yet"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
 
 jobs:
   post:
@@ -42,4 +51,5 @@ jobs:
           YOUTUBE_PRIVACY_STATUS: public
           YOUTUBE_CATEGORY_ID: "24"
           LOW_QUEUE_THRESHOLD: "2"
+          FORCE_POST: ${{ github.event.inputs.force_post || 'false' }}
         run: python -m src.main

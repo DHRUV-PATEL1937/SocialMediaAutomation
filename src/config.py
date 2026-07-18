@@ -27,6 +27,7 @@ class Config:
     youtube_category_id: str
     low_queue_threshold: int
     timezone: str
+    force_post: bool
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -45,4 +46,5 @@ class Config:
             youtube_category_id=_env("YOUTUBE_CATEGORY_ID", required=False, default="24"),
             low_queue_threshold=int(_env("LOW_QUEUE_THRESHOLD", required=False, default="2")),
             timezone=_env("TIMEZONE", required=False, default="Asia/Kolkata"),
+            force_post=(_env("FORCE_POST", required=False, default="false") or "").lower() == "true",
         )

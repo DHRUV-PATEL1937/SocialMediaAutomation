@@ -204,8 +204,9 @@ That is it. GitHub Actions will post the next due video.
 3. Open the **Actions** tab.
 4. Select **Post Shorts And Reels**.
 5. Click **Run workflow**.
+6. Set `force_post` to `true` only when you want to post immediately even if the 2-day interval has not elapsed.
 
-The workflow also runs daily at `14:00 UTC`. The script only posts when the last successful post was at least 2 days ago.
+The workflow checks every 6 hours. The script only posts when the last successful post was at least 2 days ago, unless `force_post` is set to `true` for a manual run.
 
 ## Local Dry Run Notes
 
