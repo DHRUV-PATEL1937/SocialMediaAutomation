@@ -12,7 +12,7 @@ from moviepy.editor import VideoFileClip
 
 from src.config import Config
 from src.drive_client import DriveClient
-from src.google_auth import build_google_credentials
+from src.google_auth import WORKSPACE_SCOPES, YOUTUBE_SCOPES, build_google_credentials
 from src.instagram_uploader import InstagramUploader
 from src.notifier import Notifier
 from src.sheets_client import SheetRow, SheetsClient
@@ -59,16 +59,23 @@ class RunResult:
 def run_once(config: Config) -> RunResult:
     timezone = ZoneInfo(config.timezone)
     now = datetime.now(timezone)
-    credentials = build_google_credentials(
+    workspace_credentials = build_google_credentials(
         config.google_client_id,
         config.google_client_secret,
-        config.google_refresh_token,
+        config.google_workspace_refresh_token,
+        WORKSPACE_SCOPES,
+    )
+    youtube_credentials = build_google_credentials(
+        config.google_client_id,
+        config.google_client_secret,
+        config.google_youtube_refresh_token,
+        YOUTUBE_SCOPES,
     )
 
-    sheets = SheetsClient(credentials, config.google_sheet_id)
-    drive = DriveClient(credentials, config.google_drive_folder_id)
+    sheets = SheetsClient(workspace_credentials, config.google_sheet_id)
+    drive = DriveClient(workspace_credentials, config.google_drive_folder_id)
     configure_temporary_drive_manager(drive)
-    youtube = YouTubeUploader(credentials, config.youtube_privacy_status, config.youtube_category_id)
+    youtube = YouTubeUploader(youtube_credentials, config.youtube_privacy_status, config.youtube_category_id)
     instagram = InstagramUploader(config.ig_access_token, config.ig_business_account_id)
 
     rows = sheets.read_rows()

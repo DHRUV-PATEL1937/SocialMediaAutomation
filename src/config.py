@@ -15,7 +15,8 @@ def _env(name: str, required: bool = True, default: str | None = None) -> str | 
 class Config:
     google_client_id: str
     google_client_secret: str
-    google_refresh_token: str
+    google_workspace_refresh_token: str
+    google_youtube_refresh_token: str
     google_drive_folder_id: str
     google_sheet_id: str
     ig_access_token: str
@@ -34,7 +35,8 @@ class Config:
         return cls(
             google_client_id=_env("GOOGLE_CLIENT_ID"),
             google_client_secret=_env("GOOGLE_CLIENT_SECRET"),
-            google_refresh_token=_env("GOOGLE_REFRESH_TOKEN"),
+            google_workspace_refresh_token=_env("GOOGLE_WORKSPACE_REFRESH_TOKEN"),
+            google_youtube_refresh_token=_env("GOOGLE_YOUTUBE_REFRESH_TOKEN"),
             google_drive_folder_id=_env("GOOGLE_DRIVE_FOLDER_ID"),
             google_sheet_id=_env("GOOGLE_SHEET_ID"),
             ig_access_token=_env("IG_ACCESS_TOKEN"),

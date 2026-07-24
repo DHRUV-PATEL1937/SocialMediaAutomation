@@ -4,6 +4,7 @@ import sys
 import tempfile
 import types
 import unittest
+from types import SimpleNamespace
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -254,6 +255,46 @@ class InstagramPipelineTests(unittest.TestCase):
             instagram.upload_reel.assert_not_called()
             delete_mock.assert_not_called()
             self.assertFalse(compressed_path.exists())
+
+    def test_run_once_routes_separate_google_credentials(self) -> None:
+        config = SimpleNamespace(
+            google_client_id="client-id",
+            google_client_secret="client-secret",
+            google_workspace_refresh_token="workspace-refresh",
+            google_youtube_refresh_token="youtube-refresh",
+            google_sheet_id="sheet-id",
+            google_drive_folder_id="folder-id",
+            youtube_privacy_status="public",
+            youtube_category_id="24",
+            ig_access_token="ig-token",
+            ig_business_account_id="ig-business-id",
+            telegram_bot_token=None,
+            telegram_chat_id=None,
+            post_interval_days=2,
+            low_queue_threshold=2,
+            timezone="Asia/Kolkata",
+            force_post=False,
+        )
+        sheets_instance = Mock()
+        sheets_instance.read_rows.return_value = []
+        drive_instance = Mock()
+
+        with (
+            patch.object(main, "build_google_credentials", side_effect=["workspace-creds", "youtube-creds"]) as auth_mock,
+            patch.object(main, "SheetsClient", return_value=sheets_instance) as sheets_mock,
+            patch.object(main, "DriveClient", return_value=drive_instance) as drive_mock,
+            patch.object(main, "configure_temporary_drive_manager") as temp_manager_mock,
+            patch.object(main, "YouTubeUploader") as youtube_mock,
+            patch.object(main, "InstagramUploader"),
+        ):
+            main.run_once(config)
+
+        auth_mock.assert_any_call("client-id", "client-secret", "workspace-refresh", main.WORKSPACE_SCOPES)
+        auth_mock.assert_any_call("client-id", "client-secret", "youtube-refresh", main.YOUTUBE_SCOPES)
+        sheets_mock.assert_called_once_with("workspace-creds", "sheet-id")
+        drive_mock.assert_called_once_with("workspace-creds", "folder-id")
+        temp_manager_mock.assert_called_once_with(drive_instance)
+        youtube_mock.assert_called_once_with("youtube-creds", "public", "24")
 
 
 if __name__ == "__main__":

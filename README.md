@@ -54,16 +54,26 @@ Allowed statuses:
 9. Choose **Desktop app**.
 10. Copy the client ID and client secret.
 
-Install dependencies locally and generate the refresh token:
+Install dependencies locally and generate two separate Google refresh tokens:
 
 ```bash
 pip install -r requirements.txt
 python generate_tokens.py
 ```
 
-The script opens a browser. Log in with the Google account that owns the Drive folder, Sheet, and YouTube channel. Copy the printed refresh token into your GitHub secret named `GOOGLE_REFRESH_TOKEN`.
+First choose `1` for **Workspace (Drive + Sheets)**. The script opens a browser. Log in with the Google account that owns the Drive folder and Sheet. Copy the printed refresh token into your GitHub secret named `GOOGLE_WORKSPACE_REFRESH_TOKEN`.
 
-The Google token must include Drive read access plus `drive.file`, because large Instagram videos are compressed, uploaded as temporary Drive files, made public, and deleted after publishing.
+Run it again:
+
+```bash
+python generate_tokens.py
+```
+
+Then choose `2` for **YouTube**. Log in with the Google account that owns the YouTube channel. Copy the printed refresh token into your GitHub secret named `GOOGLE_YOUTUBE_REFRESH_TOKEN`.
+
+`GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` remain shared by both token flows. The app intentionally does not use the old combined `GOOGLE_REFRESH_TOKEN` secret anymore.
+
+The Workspace token includes Drive read access, `drive.file`, and Sheets access because large Instagram videos are compressed, uploaded as temporary Drive files, made public, and deleted after publishing. The YouTube token includes only `youtube.upload`.
 
 ## Google Drive Setup
 
@@ -167,7 +177,8 @@ Add:
 ```text
 GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET
-GOOGLE_REFRESH_TOKEN
+GOOGLE_WORKSPACE_REFRESH_TOKEN
+GOOGLE_YOUTUBE_REFRESH_TOKEN
 GOOGLE_DRIVE_FOLDER_ID
 GOOGLE_SHEET_ID
 IG_ACCESS_TOKEN
@@ -249,7 +260,7 @@ The next run will skip Instagram and only retry YouTube.
 
 Plan for about 30 to 45 minutes:
 
-1. Google Cloud project, APIs, OAuth client, and refresh token: 10 to 15 minutes.
+1. Google Cloud project, APIs, OAuth client, and two refresh tokens: 10 to 15 minutes.
 2. Google Sheet and Drive folder: 5 minutes.
 3. Meta app, Instagram Business or Creator connection, and long-lived Page token: 15 to 25 minutes.
 4. Telegram bot and chat ID: 2 to 5 minutes.
